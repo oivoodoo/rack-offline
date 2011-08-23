@@ -7,7 +7,7 @@ module Rails
       @app.call(env)
     end
 
-    def initialize(options = {}, app = Rails.application, &block)
+    def initialize(app = (Rails.respond_to?(:application) ? Rails.application : nil), options = {}, &block)
       config = app.config
       root = config.paths.public.to_a.first
 
