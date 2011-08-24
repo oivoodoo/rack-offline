@@ -18,6 +18,8 @@ module Rack
     # (since it gets downloaded again at the end)
     UNCACHED_KEY_INTERVAL = 10
 
+    DEFAULT_MANIFEST_PATH = "/application.manifest"
+
     def initialize(options = {}, &block)
       @cache    = options[:cache]
 
@@ -26,6 +28,8 @@ module Rack
       end
 
       @root     = Pathname.new(options[:root] || Dir.pwd)
+
+      @manifest = options[:manifest] || DEFAULT_MANIFEST_PATH
 
       if block_given?
         @config = Rack::Offline::Config.new(@root, &block)
@@ -42,31 +46,35 @@ module Rack
     end
 
     def call(env)
-      key = @key || uncached_key
+      if env["PATH_INFO"] == @manifest
+        key = @key || uncached_key
 
-      body = ["CACHE MANIFEST"]
-      body << "# #{key}"
-      @config.cache.each do |item|
-        body << URI.escape(item.to_s)
-      end
-
-      unless @config.network.empty?
-        body << "" << "NETWORK:"
-        @config.network.each do |item|
-          body << URI.escape(item.to_s)
+        body = ["CACHE MANIFEST"]
+        body << "# #{key}"
+        @config.cache.each do |item|
+            body << URI.escape(item.to_s)
         end
-      end
 
-      unless @config.fallback.empty?
-        body << "" << "FALLBACK:"
-        @config.fallback.each do |namespace, url|
-          body << "#{namespace} #{URI.escape(url.to_s)}"
+        unless @config.network.empty?
+            body << "" << "NETWORK:"
+            @config.network.each do |item|
+                body << URI.escape(item.to_s)
+            end
         end
+
+        unless @config.fallback.empty?
+            body << "" << "FALLBACK:"
+            @config.fallback.each do |namespace, url|
+                body << "#{namespace} #{URI.escape(url.to_s)}"
+            end
+        end
+
+        @logger.debug body.join("\n")
+
+        [200, {"Content-Type" => "text/cache-manifest"}, [body.join("\n")]]
+      else
+        @app.call(env)
       end
-
-      @logger.debug body.join("\n")
-
-      [200, {"Content-Type" => "text/cache-manifest"}, [body.join("\n")]]
     end
 
   private

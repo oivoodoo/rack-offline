@@ -47,14 +47,14 @@ describe "Generating a manifest in cached mode" do
   end
 
   before do
-    get "/"
+    get request_url
   end
 
   it_should_behave_like "a cache manifest"
 
   it "returns the same cache-busting header every time" do
     cache_buster = body[/^# .{64}$/]
-    get "/"
+    get request_url
     body[/^# .{64}$/].should == cache_buster
   end
 
@@ -67,7 +67,7 @@ describe "Generating a manifest in cached mode" do
     self.class.app = self.class.new_app
 
     with_session :secondary do
-      get "/"
+      get request_url
       body[/^# .{64}$/].should_not == cache_buster
     end
 
@@ -83,18 +83,18 @@ describe "Generating a manifest in cached mode" do
   end
 
   it "does contain a network section" do
-    self.class.app = self.class.new_app{ network "/" }
+    self.class.app = self.class.new_app{ network request_url }
     with_session :new_app_with_network do
-      get "/" do
+      get request_url do
         body.should =~ %r{^NETWORK:}
       end
     end
   end
 
   it "does contain a fallback section" do
-    self.class.app = self.class.new_app{ fallback("/" => "/offline.html") }
+    self.class.app = self.class.new_app{ fallback(request_url => "/offline.html") }
     with_session :new_app_with_offline do
-      get "/"
+      get request_url
       body.should =~ %r{^FALLBACK:}
     end
   end

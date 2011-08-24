@@ -8,13 +8,20 @@ module Rails
     end
 
     def initialize(app = (Rails.respond_to?(:application) ? Rails.application : nil), options = {}, &block)
-      config = app.config
-      root = config.paths.public.to_a.first
+      @app = app
+
+      root, cache_classes = if app.methods.include?(:config)
+        [config.paths.public.to_a.first, 
+         app.config.cache_classes]
+      else
+        [options[:root] || "#{Rails.root}/public", 
+         options[:cache_classes] || (Rails.env.production? ? true : false)]
+      end
 
       block = cache_block(Pathname.new(root)) unless block_given?
 
       opts = {
-        :cache => config.cache_classes,
+        :cache => cache_classes,
         :root => root,
         :logger => Rails.logger
       }.merge(options)

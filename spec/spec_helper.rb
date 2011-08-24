@@ -31,9 +31,13 @@ module Rack::Test::Methods
   end
 end
 
+def request_url
+  Rack::Offline::DEFAULT_MANIFEST_PATH
+end
+
 shared_examples_for "a cache manifest" do
   before do
-    get "/"
+    get request_url
   end
 
   it "returns the response as text/cache-manifest" do
@@ -57,13 +61,13 @@ shared_examples_for "uncached cache manifests" do
   before do
     @interval ||= Rack::Offline::UNCACHED_KEY_INTERVAL
     Time.stub(:now).and_return(Time.at(@interval))
-    get "/"
+    get request_url
   end
   
   it "returns the same cache-busting comment within a given interval" do
     cache_buster = body[/^# .{64}$/]
     Time.stub(:now).and_return(Time.at(2 * @interval - 1))
-    get "/"
+    get request_url
     body[/^# .{64}$/].should == cache_buster
   end    
 
@@ -71,7 +75,7 @@ shared_examples_for "uncached cache manifests" do
     Time.stub(:now).and_return(Time.at(@interval))
     cache_buster = body[/^# .{64}$/]
     Time.stub(:now).and_return(Time.at(2 * @interval))
-    get "/"
+    get request_url
     body[/^# .{64}$/].should_not == cache_buster
   end
 end
